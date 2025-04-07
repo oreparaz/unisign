@@ -1,0 +1,66 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+unisign_bin
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+*.cov
+coverage.html
+
+# Go specific
+*.o
+*.a
+_obj
+_test
+_testmain.go
+
+# Local build artifacts
+bin/
+dist/
+build/
+
+# GOPATH
+/vendor/
+/Godeps/
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+.*.swp
+
+# Temporary files
+*.log
+*.tmp
+tmp/
+
+# Application specific
+# Compiled unisign binaries in any location
+cmd/unisign/unisign
+unisign
+
+# Signed files created during tests
+*.signed 

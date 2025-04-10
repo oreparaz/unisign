@@ -12,6 +12,12 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// exitWithError prints an error message and exits with code 1
+func exitWithError(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "Error: "+format+"\n", args...)
+	os.Exit(1)
+}
+
 func verifyFile() {
 	// Set up a separate flagset for the verify command
 	verifyCmd := flag.NewFlagSet("verify", flag.ExitOnError)
@@ -21,29 +27,25 @@ func verifyFile() {
 	verifyCmd.Parse(os.Args[2:])
 
 	if *pubKeyFile == "" {
-		fmt.Fprintf(os.Stderr, "Error: -k flag with public key file is required\n")
-		os.Exit(1)
+		exitWithError("flag -k with public key file is required")
 	}
 
 	// Get input file from remaining arguments
 	if verifyCmd.NArg() != 1 {
-		fmt.Fprintf(os.Stderr, "Error: input file is required\n")
-		os.Exit(1)
+		exitWithError("input file is required")
 	}
 	inputFile := verifyCmd.Arg(0)
 
 	// Read the input file
 	inputData, err := os.ReadFile(inputFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading input file: %v\n", err)
-		os.Exit(1)
+		exitWithError("reading input file: %v", err)
 	}
 
 	// Extract the signature from the file
 	signatureStart := strings.Index(string(inputData), appconfig.SignaturePrefix)
 	if signatureStart == -1 {
-		fmt.Fprintf(os.Stderr, "Error: File does not contain a signature\n")
-		os.Exit(1)
+		exitWithError("file does not contain a signature")
 	}
 
 	// The signature is the full 92 characters (matching MagicString length)
@@ -55,22 +57,19 @@ func verifyFile() {
 	// Decode the base64 signature
 	decodedSig, err := base64.StdEncoding.DecodeString(signatureWithoutPrefix)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding signature: %v\n", err)
-		os.Exit(1)
+		exitWithError("decoding signature: %v", err)
 	}
 
-	// Read public key
+	// Read and parse the public key
 	pubKeyData, err := os.ReadFile(*pubKeyFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading public key file: %v\n", err)
-		os.Exit(1)
+		exitWithError("reading public key file: %v", err)
 	}
-
+	
 	// Parse the public key
 	pubKey, _, _, _, err := ssh.ParseAuthorizedKey(pubKeyData)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing public key: %v\n", err)
-		os.Exit(1)
+		exitWithError("parsing public key: %v", err)
 	}
 
 	// Create a copy of inputData with the original magic string
@@ -79,17 +78,16 @@ func verifyFile() {
 
 	// Replace the signature in the verification data with the original magic string
 	// (This simulates the file before it was signed)
-	err = unisign.ReplaceMagicAtOffset(verificationData, int64(signatureStart), []byte(appconfig.MagicString), []byte(signature))
+	err = unisign.ReplaceMagicAtOffset(verificationData, int64(signatureStart), 
+		[]byte(appconfig.MagicString), []byte(signature))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error replacing signature with magic string: %v\n", err)
-		os.Exit(1)
+		exitWithError("replacing signature with magic string: %v", err)
 	}
 
 	// Verify the signature
 	err = unisign.VerifySignature(pubKey, verificationData, uint64(signatureStart), decodedSig)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Signature verification failed: %v\n", err)
-		os.Exit(1)
+		exitWithError("signature verification failed: %v", err)
 	}
 
 	fmt.Println("Signature verified successfully.")

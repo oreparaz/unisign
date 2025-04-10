@@ -20,8 +20,9 @@ LDFLAGS=-ldflags="-X main.Version=$$(git describe --tags --always --dirty 2>/dev
 # Testing settings
 TEST_FLAGS=-race
 TEST_TIMEOUT=600s
+TEST_QUICK_TIMEOUT=15s
 
-.PHONY: all build clean test coverage deps vendor help
+.PHONY: all build clean test coverage deps vendor help test-quick
 
 all: clean deps test build
 
@@ -43,10 +44,16 @@ coverage:
 	$(GOTEST) $(TEST_FLAGS) -timeout $(TEST_TIMEOUT) -coverprofile=coverage.out ./...
 	$(GOCMD) tool cover -html=coverage.out -o coverage.html
 
-# Run short tests (faster)
-test-short:
-	@echo "Running short tests..."
-	$(GOTEST) $(TEST_FLAGS) -timeout $(TEST_TIMEOUT) -short ./...
+# Run quick tests (very fast, under 15 seconds)
+test-quick:
+	@echo "Running quick tests (under 15 seconds)..."
+	$(GOTEST) -timeout $(TEST_QUICK_TIMEOUT) -short ./...
+	@echo "Running placeholder verification script..."
+	chmod +x ./pkg/placeholder/example/verify_placeholder.sh
+	./pkg/placeholder/example/verify_placeholder.sh
+	@echo "Running C placeholder verification script..."
+	chmod +x ./pkg/placeholder/example/verify_placeholder_c.sh
+	./pkg/placeholder/example/verify_placeholder_c.sh
 
 # Clean build artifacts
 clean:
@@ -71,7 +78,7 @@ help:
 	@echo "Available targets:"
 	@echo "  build        - Build the binary"
 	@echo "  test         - Run tests"
-	@echo "  test-short   - Run tests with -short flag"
+	@echo "  test-quick   - Run tests in short mode without race detector (under 15 seconds)"
 	@echo "  coverage     - Run tests with coverage"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  deps         - Ensure dependencies are up to date"

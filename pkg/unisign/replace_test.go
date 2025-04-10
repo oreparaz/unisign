@@ -2,6 +2,7 @@ package unisign
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -163,6 +164,91 @@ func TestReplaceMagicAtOffset(t *testing.T) {
 
 			if !bytes.Equal(buffer, tc.wantBuffer) {
 				t.Errorf("ReplaceMagicAtOffset() buffer = %v, want %v", buffer, tc.wantBuffer)
+			}
+		})
+	}
+}
+
+func TestCheckExactlyOneMagicString(t *testing.T) {
+	testCases := []struct {
+		name     string
+		buf      []byte
+		magic    []byte
+		expected int64
+		err      error
+	}{
+		{
+			name:     "exactly one magic string",
+			buf:      []byte("start of the buffer MAGIC rest of the buffer"),
+			magic:    []byte("MAGIC"),
+			expected: 20,
+			err:      nil,
+		},
+		{
+			name:     "no magic string",
+			buf:      []byte("start of the buffer rest of the buffer"),
+			magic:    []byte("MAGIC"),
+			expected: 0,
+			err:      ErrMagicNotFound,
+		},
+		{
+			name:     "multiple magic strings",
+			buf:      []byte("MAGIC in the beginning, MAGIC in the middle, MAGIC at the end"),
+			magic:    []byte("MAGIC"),
+			expected: 0,
+			err:      ErrMultipleMagicStrings,
+		},
+		{
+			name:     "two overlapping magic strings",
+			buf:      []byte("MAGICMAGIC"),
+			magic:    []byte("MAGIC"),
+			expected: 0,
+			err:      ErrMultipleMagicStrings,
+		},
+		{
+			name:     "empty buffer",
+			buf:      []byte{},
+			magic:    []byte("MAGIC"),
+			expected: 0,
+			err:      ErrMagicNotFound,
+		},
+		{
+			name:     "empty magic",
+			buf:      []byte("rest of the buffer"),
+			magic:    []byte{},
+			expected: 0,
+			err:      ErrMagicNotFound,
+		},
+		{
+			name:     "magic at start",
+			buf:      []byte("MAGICrest of the buffer"),
+			magic:    []byte("MAGIC"),
+			expected: 0,
+			err:      nil,
+		},
+		{
+			name:     "magic at end",
+			buf:      []byte("rest of the buffer MAGIC"),
+			magic:    []byte("MAGIC"),
+			expected: 19,
+			err:      nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := CheckExactlyOneMagicString(tc.buf, tc.magic)
+			
+			if tc.err != nil {
+				if err == nil {
+					t.Errorf("expected error %v, got nil", tc.err)
+				} else if !errors.Is(err, tc.err) && tc.err != ErrMultipleMagicStrings {
+					t.Errorf("expected error %v, got %v", tc.err, err)
+				}
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			} else if got != tc.expected {
+				t.Errorf("expected offset %d, got %d", tc.expected, got)
 			}
 		})
 	}

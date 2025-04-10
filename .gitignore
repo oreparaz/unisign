@@ -60,7 +60,16 @@ tmp/
 # Application specific
 # Compiled unisign binaries in any location
 cmd/unisign/unisign
-unisign
 
 # Signed files created during tests
-*.signed 
+*.signed
+
+# Demo script output artifacts
+example/test_key
+example/test_key.pub
+example/msg
+example/msg.signed
+example/msg.signed.tampered
+
+# C program artifacts
+pkg/placeholder/example/hello 

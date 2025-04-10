@@ -35,6 +35,11 @@ func createTestFileWithMagic(t *testing.T, dir, name string) string {
 }
 
 func TestUnisign(t *testing.T) {
+	// Skip in short mode since sign_test.go and verify_test.go already cover similar functionality
+	if testing.Short() {
+		t.Skip("Skipping TestUnisign in short mode - covered by sign_test.go and verify_test.go")
+	}
+
 	// Create temporary directory for test files
 	tmpDir := t.TempDir()
 
@@ -93,6 +98,11 @@ func TestUnisign(t *testing.T) {
 }
 
 func TestUnisignErrors(t *testing.T) {
+	// Skip in short mode
+	if testing.Short() {
+		t.Skip("Skipping TestUnisignErrors in short mode")
+	}
+
 	// Test cases
 	testCases := []struct {
 		name        string

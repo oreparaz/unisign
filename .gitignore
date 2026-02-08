@@ -72,4 +72,4 @@ example/msg.signed
 example/msg.signed.tampered
 
 # C program artifacts
-pkg/placeholder/example/hello 
+pkg/placeholder/example/c/hello

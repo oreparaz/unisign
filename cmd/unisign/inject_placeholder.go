@@ -30,7 +30,7 @@ func injectPlaceholder() {
 	if err != nil {
 		exitWithError("opening input file: %v", err)
 	}
-	magic := make([]byte, 4)
+	magic := make([]byte, 5)
 	f.Read(magic)
 	f.Close()
 
@@ -49,6 +49,28 @@ func injectPlaceholder() {
 
 		if err := appconfig.InjectPlaceholderIntoELF(opts); err != nil {
 			exitWithError("injecting placeholder into ELF: %v", err)
+		}
+
+		fmt.Printf("Successfully injected placeholder into %s\n", inputFile)
+		fmt.Printf("Output written to: %s\n", *outputFile)
+		return
+	}
+
+	if appconfig.IsPDF(magic) {
+		fmt.Printf("PDF document detected: %s\n", inputFile)
+
+		if *outputFile == "" {
+			*outputFile = inputFile + ".placeholder"
+		}
+
+		opts := appconfig.PDFInjectionOptions{
+			InputPath:   inputFile,
+			OutputPath:  *outputFile,
+			Placeholder: appconfig.MagicString,
+		}
+
+		if err := appconfig.InjectPlaceholderIntoPDF(opts); err != nil {
+			exitWithError("injecting placeholder into PDF: %v", err)
 		}
 
 		fmt.Printf("Successfully injected placeholder into %s\n", inputFile)
@@ -88,6 +110,6 @@ func injectPlaceholder() {
 		fmt.Printf("Output written to: %s\n", *outputFile)
 
 	default:
-		exitWithError("unsupported file type '%s'. Currently ZIP and ELF files are supported", ext)
+		exitWithError("unsupported file type '%s'. Currently ELF, PDF, and ZIP files are supported", ext)
 	}
 }

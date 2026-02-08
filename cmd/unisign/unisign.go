@@ -35,5 +35,5 @@ func printUsage() {
 	fmt.Fprintf(os.Stderr, "\nCommands:\n")
 	fmt.Fprintf(os.Stderr, "  sign              - Sign a file containing the magic placeholder\n")
 	fmt.Fprintf(os.Stderr, "  verify            - Verify a signed file\n")
-	fmt.Fprintf(os.Stderr, "  inject-placeholder - Inject the magic placeholder into supported file formats (ELF, .zip)\n")
+	fmt.Fprintf(os.Stderr, "  inject-placeholder - Inject the magic placeholder into supported file formats (ELF, PDF, .zip)\n")
 } 

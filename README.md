@@ -51,10 +51,10 @@ You can put the magic placeholder string anywhere in the file. It doesn't matter
 You can use the `unisign inject-placeholder` command to put the placeholder in popular file formats:
 
  - ZIP files (including .jar)
+ - ELF binaries
 
 Future:
  - PDF documents
- - ELF binaries
 
 ### Injecting placeholder in source code
 
@@ -126,7 +126,7 @@ https://github.com/oreparaz/unisign
 
 ### TODO
 - [ ] multiple signatures: make more space
-- [ ] insert-placeholder with .elf files
+- [x] insert-placeholder with .elf files
 - [ ] Make a placeholder that goes thru compression
 - [ ] java library
 - [ ] Make signatures verifiable with ssh-keygen

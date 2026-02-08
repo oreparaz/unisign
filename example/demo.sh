@@ -32,7 +32,7 @@ echo "Key generated: $SSH_KEY and $SSH_KEY_PUB"
 
 # 2. Create a message file with the magic string
 echo -e "\n2. Creating message file..."
-MAGIC_STRING="us-1-B64XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX==="
+MAGIC_STRING="us1-r/GZBm1d749E+KbBLWaEnR5fNz626Deutp0P9F4ICt5EOqGw+DeMQUNHb5TLBt+gol0p82zcb9sMDO+Ai7e2TA=="
 MSG_FILE="msg"
 
 # Write the message with the magic string
@@ -68,7 +68,7 @@ cp "$SIGNED_FILE" "$TAMPERED_FILE"
 
 # Corrupt a random byte in the file, avoiding the signature region
 FILE_SIZE=$(wc -c < "$TAMPERED_FILE")
-SIGNATURE_START=$(grep -b -o "us-1" "$TAMPERED_FILE" | head -1 | cut -d: -f1)
+SIGNATURE_START=$(grep -b -o "us1-" "$TAMPERED_FILE" | head -1 | cut -d: -f1)
 SIGNATURE_END=$((SIGNATURE_START + 92))
 
 # Choose a position before or after the signature

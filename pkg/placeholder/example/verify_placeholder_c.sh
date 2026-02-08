@@ -14,7 +14,7 @@ echo -e "${YELLOW}Verifying the placeholder string in the compiled C binary...${
 
 # Get the script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/c"
 
 # Define binary path
 BINARY_PATH="./hello"

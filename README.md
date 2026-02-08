@@ -1,8 +1,12 @@
 # unisign: embed signatures on arbitrary file formats
 
-`unisign` enables embedding digital signatures directly within arbitrary file formats. This approach is particularly useful when detached signatures (separate signature files) are impractical or not supported by the target system. `unisign` attempts at maintaining compatibility with the original format.
+`unisign` enables embedding digital signatures directly within arbitrary file formats. This approach is particularly useful when detached signatures (separate signature files) are impractical or not supported by the target system. `unisign` maintains compatibility with the original format — signed files still work as their unsigned versions.
 
-You can use `unisign` to embed a signature in an ELF file, a .jar file. Those files "just work" as their unsigned versions. 
+Supported formats:
+- **ELF binaries** — adds a `.note.unisign` section via the section header table
+- **PDF documents** — appends a standard incremental update containing the signature
+- **ZIP files** (including `.jar`) — stores the signature in the ZIP comment field
+- **Source code / arbitrary files** — embed the placeholder string directly
 
 `unisign` is in experimental phase. The signature format is subject to change. We won't support backwards compatibility, so proceed with care.
 
@@ -18,68 +22,78 @@ ssh-keygen -t ed25519 -f unisign_key -N "" -C "unisign-key"
 
 This will generate the files `unisign_key` and `unisign_key.pub`.
 
-### Signing
+### Signing and verifying
 
-1. Embed the following magic string somewhere in the file to be signed:
-
-```
-us1-r/GZBm1d749E+KbBLWaEnR5fNz626Deutp0P9F4ICt5EOqGw+DeMQUNHb5TLBt+gol0p82zcb9sMDO+Ai7e2TA==
-```
-
-This just "makes room" for the signature in the file to be signed.
-
-2. Call `unisign` on the file to be signed. This will replace the previous placeholder with an actual signature:
+The general workflow is: **inject placeholder → sign → verify**.
 
 ```
-➜ ./unisign sign -k unisign_key msg.txt
-Successfully signed msg.txt -> msg.txt.signed
-➜
+# 1. Inject the placeholder into your file
+unisign inject-placeholder -o prepared_file <input_file>
+
+# 2. Sign
+unisign sign -k unisign_key prepared_file
+
+# 3. Verify
+unisign verify -k unisign_key.pub prepared_file.signed
 ```
 
-### Verification
+### ELF binaries
+
+`inject-placeholder` adds a `.note.unisign` section to the ELF binary. The binary remains fully functional.
 
 ```
-➜ ./unisign verify -k unisign_key.pub msg.txt.signed
-Signature verified successfully.
-➜  
+# Inject placeholder into an ELF binary
+unisign inject-placeholder -o myapp.prepared myapp
+
+# Sign it
+unisign sign -k unisign_key myapp.prepared
+
+# Verify — the signed binary still runs normally
+unisign verify -k unisign_key.pub myapp.prepared.signed
+./myapp.prepared.signed   # works as before
 ```
 
-### Injecting placeholder in binary formats
+See `example/elf-demo.sh` for a full working example.
 
-You can put the magic placeholder string anywhere in the file. It doesn't matter where. `unisign sign` will replace this placeholder with an actual signature (preserving length).
+### PDF documents
 
-You can use the `unisign inject-placeholder` command to put the placeholder in popular file formats:
-
- - ZIP files (including .jar)
- - ELF binaries
-
-Future:
- - PDF documents
-
-### Injecting placeholder in source code
-
-You can also inject the placeholder in the source code, hoping the compilation process preserves this placeholder and puts the string somewhere in the output artifact. This process is inherently heuristic and can fail if the compiler is too aggresive.
-
-#### In C code
+`inject-placeholder` appends a standard PDF incremental update containing the placeholder. The PDF remains valid and openable in any PDF viewer.
 
 ```
-#if defined(__APPLE__) && defined(__MACH__)
-    // macOS - Mach-O format requires segment,section format
-    __attribute__((section("__NOTE,__unisign")))
-#else
-    // Linux/other - ELF format
-    __attribute__((section(".note.unisign")))
-#endif
-const char magic_comment[] = "us1-r/GZBm1d749E+KbBLWaEnR5fNz626Deutp0P9F4ICt5EOqGw+DeMQUNHb5TLBt+gol0p82zcb9sMDO+Ai7e2TA==";
+# Inject placeholder into a PDF
+unisign inject-placeholder -o document.prepared.pdf document.pdf
+
+# Sign it
+unisign sign -k unisign_key document.prepared.pdf
+
+# Verify
+unisign verify -k unisign_key.pub document.prepared.pdf.signed
 ```
 
-#### In golang
+See `example/pdf-demo.sh` for a full working example.
 
-- In golang, you can embed the placeholder string by doing this:
+### ZIP files (including .jar)
+
+`inject-placeholder` stores the placeholder in the ZIP comment field. The archive remains valid.
 
 ```
-// This example demonstrates how to use the placeholder package
-// to include the magic signature placeholder in your binary
+# Inject placeholder into a ZIP/JAR
+unisign inject-placeholder -o app.jar.prepared app.jar
+
+# Sign and verify
+unisign sign -k unisign_key app.jar.prepared
+unisign verify -k unisign_key.pub app.jar.prepared.signed
+```
+
+### Source code (Go, C, and others)
+
+You can embed the placeholder directly in source code. The compilation process preserves the string in the output binary, which can then be signed. This is inherently heuristic and can fail if the compiler optimizes the string away.
+
+#### Go
+
+Use the `placeholder` package to ensure the string survives compilation:
+
+```go
 package main
 
 import (
@@ -88,22 +102,47 @@ import (
 )
 
 func main() {
-	// Call this function during initialization to ensure the magic string
-	// is included in the binary and not optimized away by the compiler
 	placeholder.IncludePlaceholderSignatureInBinary()
-		
 	fmt.Println("Hello, world!")
-	
-	// Your application's main logic goes here
-	// ...
-} 
+}
 ```
 
-Examples with JSON: not a great example
+Then build, sign, and verify:
+
+```
+go build -o myapp .
+unisign sign -k unisign_key myapp
+unisign verify -k unisign_key.pub myapp.signed
+```
+
+#### C
+
+Use a section attribute to prevent the compiler from discarding the string:
+
+```c
+#if defined(__APPLE__) && defined(__MACH__)
+    __attribute__((section("__NOTE,__unisign")))
+#else
+    __attribute__((section(".note.unisign")))
+#endif
+const char magic_comment[] = "us1-r/GZBm1d749E+KbBLWaEnR5fNz626Deutp0P9F4ICt5EOqGw+DeMQUNHb5TLBt+gol0p82zcb9sMDO+Ai7e2TA==";
+```
+
+Then compile, sign, and verify as usual.
+
+#### Any other format
+
+You can manually embed the placeholder string anywhere in a file:
+
+```
+us1-r/GZBm1d749E+KbBLWaEnR5fNz626Deutp0P9F4ICt5EOqGw+DeMQUNHb5TLBt+gol0p82zcb9sMDO+Ai7e2TA==
+```
+
+`unisign sign` will find and replace this placeholder with an actual signature (preserving length). It doesn't matter where in the file the string appears — it just needs to appear exactly once.
 
 ### Public key distribution
 
-Since these are ed25519 ssh keys, you can use github as PKI. Go to github.com/username.keys to download those.
+Since these are ed25519 SSH keys, you can use GitHub as PKI. Go to `github.com/<username>.keys` to download a user's public keys.
 
 ## Technical Details
 
@@ -127,6 +166,7 @@ https://github.com/oreparaz/unisign
 ### TODO
 - [ ] multiple signatures: make more space
 - [x] insert-placeholder with .elf files
+- [x] insert-placeholder with PDF documents
 - [ ] Make a placeholder that goes thru compression
 - [ ] java library
 - [ ] Make signatures verifiable with ssh-keygen
